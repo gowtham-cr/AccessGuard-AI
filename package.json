@@ -1,0 +1,25 @@
+{
+  "name": "accessguard-ai",
+  "version": "1.0.0",
+  "description": "Automated Barrier Scanner for Public Digital Services — Accessible by Default",
+  "private": true,
+  "scripts": {
+    "dev:server": "npm.cmd --prefix server run dev",
+    "dev:client": "npm.cmd --prefix client run dev",
+    "dev": "node -e \"console.log('Run server and client concurrently or in separate terminals with npm run dev:server and npm run dev:client')\"",
+    "build:client": "npm.cmd --prefix client run build",
+    "test:server": "npm.cmd --prefix server test",
+    "test:client": "npm.cmd --prefix client test",
+    "test": "npm.cmd --prefix server test && npm.cmd --prefix client test"
+  },
+  "keywords": [
+    "accessibility",
+    "wcag",
+    "scanner",
+    "a11y",
+    "playwright",
+    "axe-core"
+  ],
+  "author": "AccessGuard AI Team",
+  "license": "ISC"
+}

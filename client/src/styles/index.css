@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: #070D19;
+    color: #F1F5F9;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  /* Accessible focus indicators throughout the application */
+  *:focus-visible {
+    outline: 2px solid #2DD4BF;
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  .bg-glass {
+    background: rgba(11, 19, 41, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .border-glow-teal {
+    box-shadow: 0 0 15px -3px rgba(20, 184, 166, 0.25);
+  }
+
+  /* Citizen Accessibility Scaling */
+  .citizen-font-normal {
+    font-size: 1rem;
+  }
+
+  .citizen-font-large {
+    font-size: 1.15rem;
+  }
+
+  .citizen-font-xlarge {
+    font-size: 1.3rem;
+  }
+
+  /* High Contrast Mode for Low-Vision & Senior Citizens */
+  .citizen-high-contrast {
+    background-color: #000000 !important;
+    color: #FFFFFF !important;
+  }
+
+  .citizen-high-contrast .hc-card {
+    background-color: #0c0c0c !important;
+    border-color: #FACC15 !important;
+    color: #FFFFFF !important;
+  }
+
+  .citizen-high-contrast .hc-text-highlight {
+    color: #FACC15 !important;
+  }
+
+  .citizen-high-contrast .hc-border {
+    border-color: #FACC15 !important;
+  }
+
+  .citizen-high-contrast .hc-btn-primary {
+    background-color: #FACC15 !important;
+    color: #000000 !important;
+    font-weight: 800 !important;
+  }
+}
+
