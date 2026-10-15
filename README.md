@@ -168,6 +168,14 @@ The frontend starts on `http://localhost:5173`.
   - Searchable Audit History (`/history`) with live status badges and inspect links.
   - Configurable API URL via `VITE_API_URL` without exposing backend secrets.
   - Vitest + Testing Library test suite (7 tests passing) and production build verified.
+     
+- [ ] ## 🎥 Project Demo
+
+Watch our Hackurity 2026 demo: https://youtu.be/_8x6sUtiCGI
+
+## 📄 Technical Write-up
+
+[View Technical Write-up](TECHNICAL_WRITEUP.pdf)
 
 - [ ] **Phase 4 (Upcoming): AI Remediation Integration**
   - Backend-only AI adapter to provide plain-language explanations and reviewed code diffs when `AI_API_KEY` is present.
