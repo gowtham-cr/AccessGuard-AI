@@ -14,6 +14,7 @@ describe('Real Accessibility Scanning Engine (POST & GET /api/scans)', () => {
   let user1Token;
   let user2Token;
   let user1ScanId;
+  let barrierScanId;
 
   before(async () => {
     // 1. In-memory database for complete test isolation
@@ -398,6 +399,8 @@ describe('Real Accessibility Scanning Engine (POST & GET /api/scans)', () => {
     assert.ok(body.scan.total_violations > 0, 'Expected genuine accessibility barriers');
     assert.ok(body.violations.length > 0);
 
+    barrierScanId = body.scan.id;
+
     // Verify concrete evidence returned for barriers
     const ruleIds = body.violations.map((v) => v.rule_id);
     assert.ok(ruleIds.includes('image-alt') || ruleIds.includes('html-has-lang') || ruleIds.includes('label'));
@@ -490,6 +493,15 @@ describe('Real Accessibility Scanning Engine (POST & GET /api/scans)', () => {
     assert.ok(dbViolations.some((v) => v.rule_id === 'image-alt' && v.selector.includes('#hero-img')));
     assert.ok(dbViolations.some((v) => v.rule_id === 'label' && v.selector.includes('#citizen-input')));
     assert.ok(dbViolations.some((v) => v.rule_id === 'color-contrast' && v.selector.includes('#low-contrast-text')));
+
+    // 6. Verify transparent grade gating: scan with critical barriers cannot receive Grade A
+    if (body.scan.critical_count > 0) {
+      assert.notEqual(body.scan.wcag_grade, 'A', 'Scans with critical barriers must not receive Grade A');
+      assert.notEqual(body.scoring.grade, 'A', 'Scoring grade must not be Grade A when critical barriers exist');
+      assert.equal(body.scoring.fullyCompliant, false);
+      assert.equal(body.scoring.hasCriticalBarriers, true);
+      assert.ok(body.scoring.criticalWarning);
+    }
   });
 
   test('POST /api/scans collects and stores real axe-core incomplete checks into scan_manual_checks', async () => {
@@ -902,6 +914,96 @@ describe('Real Accessibility Scanning Engine (POST & GET /api/scans)', () => {
     assert.equal(res.status, 404);
   });
 
+  test('GET /api/scans/:id/export?format=sarif exports clean scan with valid SARIF 2.1.0 and zero results', async () => {
+    const res = await fetch(`${apiUrl}/api/scans/${user1ScanId}/export?format=sarif`, {
+      headers: { Authorization: `Bearer ${user1Token}` },
+    });
+
+    assert.equal(res.status, 200);
+    const contentType = res.headers.get('content-type');
+    assert.ok(contentType.includes('application/sarif+json'));
+    const disposition = res.headers.get('content-disposition');
+    assert.ok(disposition.includes(`filename="accessguard-audit-${user1ScanId}.sarif"`));
+
+    const sarif = await res.json();
+    assert.equal(sarif.version, '2.1.0');
+    assert.equal(sarif.$schema, 'https://json.schemastore.org/sarif-2.1.0.json');
+    assert.ok(Array.isArray(sarif.runs));
+    assert.equal(sarif.runs.length, 1);
+
+    const run = sarif.runs[0];
+    assert.equal(run.tool.driver.name, 'AccessGuard-AI');
+    assert.equal(run.tool.driver.version, '1.0.0');
+    assert.deepEqual(run.tool.driver.rules, []);
+    assert.deepEqual(run.results, []);
+    assert.equal(run.properties.scanId, user1ScanId);
+    assert.equal(run.properties.totalViolations, 0);
+  });
+
+  test('GET /api/scans/:id/sarif exports scan with genuine fixture findings, proper rule indices, and remediation guidance', async () => {
+    const res = await fetch(`${apiUrl}/api/scans/${barrierScanId}/sarif`, {
+      headers: { Authorization: `Bearer ${user1Token}` },
+    });
+
+    assert.equal(res.status, 200);
+    const contentType = res.headers.get('content-type');
+    assert.ok(contentType.includes('application/sarif+json'));
+    const disposition = res.headers.get('content-disposition');
+    assert.ok(disposition.includes(`filename="accessguard-audit-${barrierScanId}.sarif"`));
+
+    const sarif = await res.json();
+    assert.equal(sarif.version, '2.1.0');
+    assert.equal(sarif.$schema, 'https://json.schemastore.org/sarif-2.1.0.json');
+
+    const run = sarif.runs[0];
+    assert.equal(run.tool.driver.name, 'AccessGuard-AI');
+    assert.ok(run.tool.driver.rules.length > 0, 'Must have rules derived from actual findings');
+    assert.ok(run.results.length > 0, 'Must have results derived from actual findings');
+
+    // Verify all results reference valid rules
+    for (const result of run.results) {
+      assert.ok(result.ruleId);
+      assert.ok(result.ruleIndex >= 0 && result.ruleIndex < run.tool.driver.rules.length);
+      const matchedRule = run.tool.driver.rules[result.ruleIndex];
+      assert.equal(matchedRule.id, result.ruleId);
+      assert.ok(['error', 'warning', 'note'].includes(result.level));
+      assert.ok(result.locations.length >= 1);
+      assert.ok(result.locations[0].physicalLocation.artifactLocation.uri);
+      assert.ok(result.properties.impact);
+      assert.equal(result.properties.findingStatus, 'confirmed_violation');
+    }
+
+    // Verify rule metadata & deterministic guidance
+    const altRule = run.tool.driver.rules.find((r) => r.id === 'image-alt');
+    if (altRule) {
+      assert.equal(altRule.defaultConfiguration.level, 'error');
+      assert.ok(altRule.properties.tags.includes('accessibility'));
+      assert.ok(altRule.help.text.includes('Deterministic') || altRule.help.text.includes('alt') || altRule.help.text.includes('Problem'));
+    }
+
+    assert.ok(run.properties.automatedTestingDisclaimer.includes('30-40% of WCAG'));
+  });
+
+  test('GET /api/scans/:id/sarif validates scan ID and enforces authorization', async () => {
+    // 1. Invalid scan ID
+    const invalidRes = await fetch(`${apiUrl}/api/scans/not-a-number/sarif`, {
+      headers: { Authorization: `Bearer ${user1Token}` },
+    });
+    assert.equal(invalidRes.status, 400);
+
+    // 2. Non-existent scan ID
+    const missingRes = await fetch(`${apiUrl}/api/scans/999999/sarif`, {
+      headers: { Authorization: `Bearer ${user1Token}` },
+    });
+    assert.equal(missingRes.status, 404);
+
+    // 3. Unauthorized access by another user
+    const unauthRes = await fetch(`${apiUrl}/api/scans/${barrierScanId}/sarif`, {
+      headers: { Authorization: `Bearer ${user2Token}` },
+    });
+    assert.equal(unauthRes.status, 404);
+  });
+
   test('GET /api/scans/compare compares baseline vs target scan and identifies resolved and remaining issues', async () => {
     // Run two scans of the test website:
     // Scan A (Baseline): audits /site/home (contains link to /site/about with image-alt and /site/contact with label)
@@ -953,6 +1055,82 @@ describe('Real Accessibility Scanning Engine (POST & GET /api/scans)', () => {
     assert.equal(res.status, 400);
     const body = await res.json();
     assert.ok(body.error.includes('Cannot compare a scan with itself'));
+  });
+
+  test('Historical scan compatibility: scans with critical violations never return Grade A in history, details, or export', async () => {
+    // Insert a historical scan directly into SQLite with score 95 and grade A
+    const historicalInsert = run(
+      `INSERT INTO scans (
+        user_id, url, status, total_violations, critical_count, serious_count,
+        moderate_count, minor_count, passes_count, inapplicable_count, incomplete_count,
+        wcag_score, wcag_grade, max_pages, max_depth, pages_scanned, pages_failed, created_at, completed_at
+      ) VALUES (?, ?, 'completed', 1, 1, 0, 0, 0, 190, 10, 0, 95, 'A', 1, 1, 1, 0, datetime('now', '-2 days'), datetime('now', '-2 days'))`,
+      1,
+      'https://legacy-audit.example.gov'
+    );
+    const legacyScanId = historicalInsert.lastInsertRowid;
+
+    // Insert normalized critical violation
+    run(
+      `INSERT INTO scan_violations (
+        scan_id, page_url, rule_id, impact, description, selector, html_snippet
+      ) VALUES (?, 'https://legacy-audit.example.gov', 'image-alt', 'critical', 'Image missing alt', 'img.hero', '<img src="hero.jpg">')`,
+      legacyScanId
+    );
+
+    // 1. GET /api/scans/:id details endpoint
+    const detailRes = await fetch(`${apiUrl}/api/scans/${legacyScanId}`, {
+      headers: { Authorization: `Bearer ${user1Token}` },
+    });
+    assert.equal(detailRes.status, 200);
+    const detailBody = await detailRes.json();
+    assert.equal(detailBody.scan.wcag_score, 95);
+    assert.equal(detailBody.scan.wcag_grade, 'B', 'Historical scan detail must gate Grade A down to B');
+    assert.equal(detailBody.scoring.grade, 'B');
+    assert.equal(detailBody.scoring.gradeGated, true);
+    assert.equal(detailBody.scoring.hasCriticalBarriers, true);
+    assert.equal(detailBody.scoring.fullyCompliant, false);
+    assert.ok(detailBody.scoring.criticalWarning);
+
+    // 2. GET /api/scans history list endpoint
+    const historyRes = await fetch(`${apiUrl}/api/scans`, {
+      headers: { Authorization: `Bearer ${user1Token}` },
+    });
+    assert.equal(historyRes.status, 200);
+    const historyBody = await historyRes.json();
+    const fetchedLegacyScan = historyBody.scans.find((s) => s.id === legacyScanId);
+    assert.ok(fetchedLegacyScan);
+    assert.equal(fetchedLegacyScan.wcag_score, 95);
+    assert.equal(fetchedLegacyScan.wcag_grade, 'B', 'Scan history list must gate Grade A down to B for legacy scans');
+
+    // 3. GET /api/scans/:id/export JSON export
+    const exportRes = await fetch(`${apiUrl}/api/scans/${legacyScanId}/export?format=json`, {
+      headers: { Authorization: `Bearer ${user1Token}` },
+    });
+    assert.equal(exportRes.status, 200);
+    const exportBody = await exportRes.json();
+    assert.equal(exportBody.audit.summary.wcagScore, 95);
+    assert.equal(exportBody.audit.summary.wcagGrade, 'B', 'Export must gate Grade A down to B');
+
+    // 4. GET /api/scans/:id/export?format=sarif SARIF export
+    const sarifExportRes = await fetch(`${apiUrl}/api/scans/${legacyScanId}/export?format=sarif`, {
+      headers: { Authorization: `Bearer ${user1Token}` },
+    });
+    assert.equal(sarifExportRes.status, 200);
+    const sarifExportBody = await sarifExportRes.json();
+    assert.equal(sarifExportBody.runs[0].properties.wcagScore, 95);
+    assert.equal(sarifExportBody.runs[0].properties.wcagGrade, 'B', 'SARIF export format must gate Grade A down to B');
+    assert.notEqual(sarifExportBody.runs[0].properties.wcagGrade, 'A');
+
+    // 5. GET /api/scans/:id/sarif dedicated endpoint
+    const dedicatedSarifRes = await fetch(`${apiUrl}/api/scans/${legacyScanId}/sarif`, {
+      headers: { Authorization: `Bearer ${user1Token}` },
+    });
+    assert.equal(dedicatedSarifRes.status, 200);
+    const dedicatedSarifBody = await dedicatedSarifRes.json();
+    assert.equal(dedicatedSarifBody.runs[0].properties.wcagScore, 95);
+    assert.equal(dedicatedSarifBody.runs[0].properties.wcagGrade, 'B', 'Dedicated SARIF endpoint must gate Grade A down to B');
+    assert.notEqual(dedicatedSarifBody.runs[0].properties.wcagGrade, 'A');
   });
 });
 

@@ -28,7 +28,9 @@ import {
   TrendingDown,
   TrendingUp,
   Minus,
-  Eye
+  Eye,
+  ShieldCheck,
+  Award
 } from 'lucide-react';
 
 export function ScanDetailPage() {
@@ -222,6 +224,26 @@ export function ScanDetailPage() {
     window.open(csvUrl, '_blank');
   };
 
+  const handleExportSarif = async () => {
+    try {
+      setExporting(true);
+      const res = await api.exportScanSarif(id);
+      const blob = new Blob([JSON.stringify(res, null, 2)], { type: 'application/sarif+json' });
+      const dlUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = dlUrl;
+      a.download = `accessguard-audit-${id}.sarif`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(dlUrl);
+    } catch (err) {
+      alert(`Export failed: ${err.message}`);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   // Filter violations by severity, page, and search query
   const filteredViolations = violations.filter((v) => {
     const matchesSeverity = 
@@ -352,6 +374,17 @@ export function ScanDetailPage() {
             >
               <FileText className="w-3.5 h-3.5" aria-hidden="true" />
               <span>Export CSV</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleExportSarif}
+              disabled={exporting || scan.status !== 'completed'}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-navy-850 hover:bg-navy-800 text-purple-300 border border-navy-750 transition-colors focus-visible:ring-2 focus-visible:ring-purple-400 disabled:opacity-50"
+              title="Download standard OASIS SARIF 2.1.0 report for GitHub Code Scanning and IDE analysis"
+            >
+              <Download className="w-3.5 h-3.5" aria-hidden="true" />
+              <span>Export SARIF</span>
             </button>
 
             <a
@@ -615,6 +648,113 @@ export function ScanDetailPage() {
               <strong className="block font-semibold">Audit In Progress</strong>
               <p className="text-slate-300 text-[11px]">Running live Playwright crawler and axe-core audit across internal pages. This page automatically updates upon completion.</p>
             </div>
+          </div>
+        )}
+
+        {/* Transparent WCAG 2.1/2.2 Compliance Scoring & Principle Breakdown */}
+        {data?.scoring && (
+          <div className="p-5 rounded-2xl bg-navy-950/80 border border-teal-500/30 space-y-4">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div 
+                  className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center border font-extrabold shadow-lg ${
+                    data.scoring.grade === 'A'
+                      ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
+                      : data.scoring.grade === 'B'
+                      ? 'bg-teal-500/15 border-teal-500/40 text-teal-300'
+                      : data.scoring.grade === 'C'
+                      ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
+                      : data.scoring.grade === 'D'
+                      ? 'bg-orange-500/15 border-orange-500/40 text-orange-300'
+                      : 'bg-red-500/15 border-red-500/40 text-red-400'
+                  }`}
+                  title={`Letter grade ${data.scoring.grade} based on weighted WCAG compliance`}
+                >
+                  <span className="text-2xl font-mono leading-none">{data.scoring.grade}</span>
+                  <span className="text-[9px] uppercase tracking-wider font-semibold opacity-80">Grade</span>
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-teal-400" />
+                      <span>WCAG Compliance Score:</span>
+                    </h2>
+                    <span className="text-lg font-mono font-extrabold text-teal-300">
+                      {data.scoring.overallScore}<span className="text-xs text-slate-400 font-normal">/100</span>
+                    </span>
+                    {data.scoring.fullyCompliant && (
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold uppercase">
+                        Zero Barriers Detected
+                      </span>
+                    )}
+                    {data.scoring.gradeGated && (
+                      <span 
+                        className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold uppercase tracking-wider"
+                        title={data.scoring.gradeGatingReason || `Grade capped at ${data.scoring.grade} due to severe barriers`}
+                      >
+                        Grade Capped: {data.scoring.grade}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Deterministic score calculated from verified algorithmic checks (Weights: Critical 10, Serious 7, Moderate 3, Minor 1). Zero synthetic estimates.
+                  </p>
+                </div>
+              </div>
+
+              <div className="text-xs text-slate-400 flex items-center gap-2 bg-navy-900 px-3 py-1.5 rounded-lg border border-navy-800">
+                <Award className="w-3.5 h-3.5 text-teal-400" />
+                <span className="font-semibold text-slate-300">Audited Standard:</span>
+                <span>WCAG 2.1 / 2.2 AA</span>
+              </div>
+            </div>
+
+            {/* Explicit Critical Barrier Warning */}
+            {(data.scoring.hasCriticalBarriers || scan.critical_count > 0) && (
+              <div 
+                role="alert" 
+                className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs flex items-start gap-3"
+              >
+                <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" aria-hidden="true" />
+                <div>
+                  <strong className="block font-semibold text-red-200">
+                    Critical Accessibility Barriers Detected ({scan.critical_count || data.scoring.impactBreakdown?.critical?.failed || 0})
+                  </strong>
+                  <p className="text-red-300/90 text-[11px] leading-relaxed mt-0.5">
+                    Regardless of the numerical score ({data.scoring.overallScore}/100), critical violations represent severe blockers that prevent users with disabilities from navigating or operating key elements of this website. Under transparent WCAG grading rules, this scan cannot receive Grade A.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Principles Breakdown */}
+            {data.scoring.principleScores && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3 border-t border-navy-800/80">
+                {Object.entries(data.scoring.principleScores).map(([key, p]) => (
+                  <div key={key} className="p-3 rounded-xl bg-navy-900 border border-navy-800 space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-white capitalize">{p.label || key}</span>
+                      <span className={`font-mono font-bold ${p.score >= 80 ? 'text-teal-400' : p.score >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
+                        {p.score}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-navy-950 rounded-full h-1.5 overflow-hidden">
+                      <div 
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          p.score >= 80 ? 'bg-teal-400' : p.score >= 50 ? 'bg-amber-400' : 'bg-red-400'
+                        }`}
+                        style={{ width: `${Math.min(100, Math.max(0, p.score))}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[10px] text-slate-400 pt-0.5">
+                      <span>{p.violationCount} barrier{p.violationCount === 1 ? '' : 's'}</span>
+                      <span>{p.passCount} pass{p.passCount === 1 ? '' : 'es'}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

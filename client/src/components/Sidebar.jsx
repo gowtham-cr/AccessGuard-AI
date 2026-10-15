@@ -45,14 +45,14 @@ export function Sidebar() {
   return (
     <aside 
       aria-label="Dashboard navigation"
-      className="w-full lg:w-64 bg-navy-900/70 border-r border-navy-800 flex flex-col justify-between p-4 shrink-0"
+      className="w-full lg:w-64 bg-slate-950/40 backdrop-blur-2xl border-r border-white/10 flex flex-col justify-between p-4 shrink-0 shadow-2xl"
     >
       <div className="space-y-6">
         <div>
           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3">
             Main Navigation
           </span>
-          <nav className="mt-2 space-y-1">
+          <nav className="mt-2 space-y-1.5">
             {navItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -61,10 +61,10 @@ export function Sidebar() {
                   to={item.to}
                   end={item.to === '/dashboard'}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all focus-visible:ring-2 focus-visible:ring-teal-400 ${
+                    `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all focus-visible:ring-2 focus-visible:ring-purple-400 ${
                       isActive
-                        ? 'bg-teal-500/15 text-teal-300 border border-teal-500/30 font-bold'
-                        : 'text-slate-300 hover:text-white hover:bg-navy-800 border border-transparent'
+                        ? 'bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white font-bold shadow-lg shadow-purple-500/35 border border-purple-400/40'
+                        : 'text-slate-300 hover:text-white hover:bg-white/10 hover:border-white/10 border border-transparent'
                     }`
                   }
                 >
@@ -77,22 +77,22 @@ export function Sidebar() {
         </div>
 
         {/* Security & Integrity Status Box */}
-        <div className="p-3.5 rounded-xl bg-navy-950 border border-navy-800 space-y-2">
-          <div className="flex items-center gap-2 text-teal-400 text-xs font-bold">
-            <Shield className="w-4 h-4" aria-hidden="true" />
+        <div className="p-3.5 rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 space-y-2">
+          <div className="flex items-center gap-2 text-purple-300 text-xs font-bold">
+            <Shield className="w-4 h-4 text-purple-400" aria-hidden="true" />
             <span>Integrity System</span>
           </div>
           <ul className="text-[11px] text-slate-400 space-y-1.5 leading-tight">
             <li className="flex items-center gap-1.5">
-              <CheckCircle className="w-3 h-3 text-teal-400 shrink-0" aria-hidden="true" />
+              <CheckCircle className="w-3 h-3 text-cyan-400 shrink-0" aria-hidden="true" />
               <span>Real axe-core engine</span>
             </li>
             <li className="flex items-center gap-1.5">
-              <CheckCircle className="w-3 h-3 text-teal-400 shrink-0" aria-hidden="true" />
+              <CheckCircle className="w-3 h-3 text-cyan-400 shrink-0" aria-hidden="true" />
               <span>SSRF DNS pre-check</span>
             </li>
             <li className="flex items-center gap-1.5">
-              <CheckCircle className="w-3 h-3 text-teal-400 shrink-0" aria-hidden="true" />
+              <CheckCircle className="w-3 h-3 text-cyan-400 shrink-0" aria-hidden="true" />
               <span>Zero fabricated scores</span>
             </li>
           </ul>

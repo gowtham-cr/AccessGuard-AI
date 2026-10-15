@@ -36,27 +36,27 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-navy-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-transparent flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center px-4">
         {/* Brand Header */}
         <Link 
           to="/"
-          className="inline-flex items-center gap-3 focus-visible:ring-2 focus-visible:ring-teal-400 rounded-xl p-1"
+          className="inline-flex items-center gap-3 focus-visible:ring-2 focus-visible:ring-purple-400 rounded-xl p-1"
         >
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-teal-400 to-teal-700 flex items-center justify-center text-navy-950 shadow-lg border-glow-teal">
-            <ShieldCheck className="w-7 h-7 text-navy-950" aria-hidden="true" />
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 via-indigo-600 to-blue-600 flex items-center justify-center text-white shadow-xl shadow-purple-500/30 border border-white/20">
+            <ShieldCheck className="w-7 h-7 text-white" aria-hidden="true" />
           </div>
         </Link>
         <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-white">
           Sign In to AccessGuard AI
         </h1>
-        <p className="mt-2 text-sm text-slate-400">
+        <p className="mt-2 text-sm text-slate-300">
           Automated barrier scanner for public digital services
         </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4">
-        <div className="bg-navy-900 border border-navy-800 py-8 px-6 sm:px-10 shadow-2xl rounded-2xl">
+        <div className="bg-slate-950/40 backdrop-blur-2xl border border-white/15 py-8 px-6 sm:px-10 shadow-2xl rounded-3xl">
           {errorMessage && (
             <div 
               role="alert" 
@@ -89,7 +89,7 @@ export function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="auditor@agency.gov"
-                  className="block w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-navy-950 border border-navy-800 text-white placeholder-slate-500 text-sm focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:border-transparent transition-all"
+                  className="block w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-slate-900/60 border border-white/15 text-white placeholder-slate-400 text-sm focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:border-transparent transition-all"
                 />
               </div>
             </div>
@@ -117,7 +117,7 @@ export function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••••••"
-                  className="block w-full pl-10 pr-10 py-2.5 rounded-xl bg-navy-950 border border-navy-800 text-white placeholder-slate-500 text-sm focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:border-transparent transition-all"
+                  className="block w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-900/60 border border-white/15 text-white placeholder-slate-400 text-sm focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:border-transparent transition-all"
                 />
                 <button
                   type="button"
@@ -134,7 +134,7 @@ export function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-bold bg-teal-500 hover:bg-teal-400 text-navy-950 shadow-lg shadow-teal-500/20 transition-all focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 focus-visible:ring-offset-navy-900 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-bold bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white shadow-lg shadow-purple-500/30 border border-white/20 transition-all focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>
@@ -151,12 +151,12 @@ export function LoginPage() {
           </form>
 
           {/* Registration Link */}
-          <div className="mt-6 pt-6 border-t border-navy-800/80 text-center">
-            <p className="text-xs text-slate-400">
+          <div className="mt-6 pt-6 border-t border-white/10 text-center">
+            <p className="text-xs text-slate-300">
               Don't have an auditor account?{' '}
               <Link 
                 to="/register" 
-                className="font-semibold text-teal-300 hover:text-teal-200 underline focus-visible:ring-2 focus-visible:ring-teal-400 rounded"
+                className="font-semibold text-purple-300 hover:text-purple-200 underline focus-visible:ring-2 focus-visible:ring-purple-400 rounded"
               >
                 Create one now
               </Link>

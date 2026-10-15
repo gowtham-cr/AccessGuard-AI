@@ -2,6 +2,7 @@ import { chromium } from 'playwright';
 import { AxeBuilder } from '@axe-core/playwright';
 import { validateScanUrl, isRequestSafe } from './ssrfValidator.js';
 import { getDeterministicGuidance } from './deterministicGuidance.js';
+import { mapTagToPrinciple, deduplicateViolations, calculateWcagScore } from './wcagScorer.js';
 
 export const AUTOMATED_TESTING_DISCLAIMER = 
   'Automated barrier audits evaluate measurable algorithmic checks covering approximately 30-40% of WCAG success criteria. A scan with zero automated violations does not guarantee full WCAG compliance. Comprehensive accessibility compliance requires manual keyboard navigation, screen reader testing, and cognitive review.';
@@ -70,6 +71,7 @@ function processAxeViolations(axeResults, pageUrl) {
     const wcagTags = (v.tags || [])
       .filter((t) => t.toLowerCase().startsWith('wcag'))
       .join(', ');
+    const wcagPrinciple = mapTagToPrinciple(v.tags || []);
 
     const guidance = getDeterministicGuidance(v.id, v.help, v.helpUrl);
 
@@ -91,6 +93,7 @@ function processAxeViolations(axeResults, pageUrl) {
           help_text: v.help,
           help_url: v.helpUrl,
           wcag_tags: wcagTags,
+          wcag_principle: wcagPrinciple,
           selector,
           html_snippet: htmlSnippet,
           failure_summary: node.failureSummary || null,
@@ -113,6 +116,7 @@ function processAxeViolations(axeResults, pageUrl) {
         help_text: v.help,
         help_url: v.helpUrl,
         wcag_tags: wcagTags,
+        wcag_principle: wcagPrinciple,
         selector: 'document',
         html_snippet: '',
         failure_summary: null,
@@ -129,6 +133,7 @@ function processAxeViolations(axeResults, pageUrl) {
     const wcagTags = (inc.tags || [])
       .filter((t) => t.toLowerCase().startsWith('wcag'))
       .join(', ');
+    const wcagPrinciple = mapTagToPrinciple(inc.tags || []);
 
     const baseGuidance = `Manual review required for ${inc.id}: ${inc.help || inc.description}. Automated engines cannot conclusively verify this check on dynamic or complex elements.`;
 
@@ -150,6 +155,7 @@ function processAxeViolations(axeResults, pageUrl) {
           help_text: inc.help,
           help_url: inc.helpUrl,
           wcag_tags: wcagTags,
+          wcag_principle: wcagPrinciple,
           selector,
           html_snippet: htmlSnippet,
           failure_summary: failureSummary,
@@ -165,6 +171,7 @@ function processAxeViolations(axeResults, pageUrl) {
         help_text: inc.help,
         help_url: inc.helpUrl,
         wcag_tags: wcagTags,
+        wcag_principle: wcagPrinciple,
         selector: 'document',
         html_snippet: '',
         failure_summary: null,
@@ -459,23 +466,44 @@ export async function runWebsiteAccessibilityScan(targetUrl, options = {}) {
     const pagesScanned = pagesResult.filter((p) => p.status === 'completed').length;
     const pagesFailed = pagesResult.filter((p) => p.status === 'failed').length;
 
+    // Deduplicate findings across pages & nodes, keeping highest severity finding per selector & rule
+    const dedupedViolations = deduplicateViolations(allViolations);
+
+    let finalCritical = 0;
+    let finalSerious = 0;
+    let finalModerate = 0;
+    let finalMinor = 0;
+    for (const v of dedupedViolations) {
+      if (v.impact === 'critical') finalCritical++;
+      else if (v.impact === 'serious') finalSerious++;
+      else if (v.impact === 'moderate') finalModerate++;
+      else if (v.impact === 'minor') finalMinor++;
+    }
+
+    // Transparent, standards-based WCAG score and principle breakdown
+    const wcagScore = calculateWcagScore(dedupedViolations, totalPasses, totalIncomplete);
+
     return {
       url: rootUrl,
       status: pagesScanned > 0 ? 'completed' : 'failed',
-      totalViolations: allViolations.length,
-      criticalCount: totalCritical,
-      seriousCount: totalSerious,
-      moderateCount: totalModerate,
-      minorCount: totalMinor,
+      totalViolations: dedupedViolations.length,
+      criticalCount: finalCritical,
+      seriousCount: finalSerious,
+      moderateCount: finalModerate,
+      minorCount: finalMinor,
       passesCount: totalPasses,
       inapplicableCount: totalInapplicable,
       incompleteCount: totalIncomplete,
+      score: wcagScore.overallScore,
+      grade: wcagScore.grade,
+      principleScores: wcagScore.principleScores,
+      impactBreakdown: wcagScore.impactBreakdown,
       pagesScanned,
       pagesFailed,
       maxPages,
       maxDepth,
       pages: pagesResult,
-      violations: allViolations,
+      violations: dedupedViolations,
       manualChecks: allManualChecks,
       wcagVersion: 'WCAG 2.1 / 2.2 AA',
       automatedTestingDisclaimer: AUTOMATED_TESTING_DISCLAIMER,

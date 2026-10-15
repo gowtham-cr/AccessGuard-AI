@@ -5,7 +5,7 @@ import { Sidebar } from '../components/Sidebar.jsx';
 
 export function DashboardLayout() {
   return (
-    <div className="min-h-screen bg-navy-950 text-slate-100 flex flex-col selection:bg-teal-500 selection:text-navy-950">
+    <div className="min-h-screen bg-transparent text-slate-100 flex flex-col selection:bg-purple-500 selection:text-white">
       {/* Top Header */}
       <Navbar />
 

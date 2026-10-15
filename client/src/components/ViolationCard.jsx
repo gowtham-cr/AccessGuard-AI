@@ -61,23 +61,43 @@ export function ViolationCard({ violation, index }) {
         )}
       </div>
 
-      {/* WCAG Tags */}
-      {tagsList.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap text-xs">
-          <span className="text-slate-400 font-semibold flex items-center gap-1">
-            <BookOpen className="w-3.5 h-3.5" aria-hidden="true" />
-            Tags:
+      {/* WCAG Tags & Principle */}
+      <div className="flex items-center gap-2 flex-wrap text-xs">
+        {violation.wcag_principle && (
+          <span 
+            className={`px-2 py-0.5 rounded-md font-semibold text-[11px] uppercase tracking-wide border ${
+              violation.wcag_principle === 'perceivable'
+                ? 'bg-sky-500/15 text-sky-300 border-sky-500/30'
+                : violation.wcag_principle === 'operable'
+                ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                : violation.wcag_principle === 'understandable'
+                ? 'bg-violet-500/15 text-violet-300 border-violet-500/30'
+                : violation.wcag_principle === 'robust'
+                ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                : 'bg-slate-500/15 text-slate-300 border-slate-500/30'
+            }`}
+          >
+            Principle: {violation.wcag_principle}
           </span>
-          {tagsList.map((tag) => (
-            <span 
-              key={tag}
-              className="px-2 py-0.5 rounded-md bg-navy-800 text-slate-300 font-mono text-[11px] border border-navy-750"
-            >
-              {tag}
+        )}
+
+        {tagsList.length > 0 && (
+          <>
+            <span className="text-slate-400 font-semibold flex items-center gap-1">
+              <BookOpen className="w-3.5 h-3.5" aria-hidden="true" />
+              Tags:
             </span>
-          ))}
-        </div>
-      )}
+            {tagsList.map((tag) => (
+              <span 
+                key={tag}
+                className="px-2 py-0.5 rounded-md bg-navy-800 text-slate-300 font-mono text-[11px] border border-navy-750"
+              >
+                {tag}
+              </span>
+            ))}
+          </>
+        )}
+      </div>
 
       {/* Target DOM Element Selector */}
       {violation.selector && (

@@ -24,7 +24,13 @@ const allowedOrigins = [
   config.clientUrl,
   'http://localhost:5173',
   'http://127.0.0.1:5173',
+  'http://localhost:5000',
+  'http://127.0.0.1:5000',
 ];
+
+const isLocalDevOrigin = (origin) => {
+  return /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+};
 
 app.use(
   cors({
@@ -33,7 +39,10 @@ app.use(
       if (!origin || allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
-      return callback(null, true); // Allow during development
+      if (config.nodeEnv === 'development' && isLocalDevOrigin(origin)) {
+        return callback(null, true);
+      }
+      return callback(null, false);
     },
     credentials: true,
   })

@@ -2,33 +2,155 @@
 @tailwind components;
 @tailwind utilities;
 
+html, body {
+  min-height: 100vh;
+  background-color: #050814 !important;
+  background-image: 
+    radial-gradient(circle at 15% 15%, rgba(147, 51, 234, 0.35) 0%, transparent 45%),
+    radial-gradient(circle at 85% 20%, rgba(59, 130, 246, 0.30) 0%, transparent 45%),
+    radial-gradient(circle at 50% 85%, rgba(139, 92, 246, 0.25) 0%, transparent 50%),
+    linear-gradient(180deg, rgba(8, 12, 24, 0.45) 0%, rgba(5, 8, 18, 0.65) 100%),
+    url('/bg-glass.jpg') !important;
+  background-size: cover !important;
+  background-position: center center !important;
+  background-attachment: fixed !important;
+  background-repeat: no-repeat !important;
+  color: #F1F5F9;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
 @layer base {
   :root {
     color-scheme: dark;
   }
 
-  body {
-    background-color: #070D19;
-    color: #F1F5F9;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  }
-
   /* Accessible focus indicators throughout the application */
   *:focus-visible {
-    outline: 2px solid #2DD4BF;
+    outline: 2px solid #A855F7;
     outline-offset: 2px;
+  }
+
+  /* Custom frosted scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: rgba(7, 13, 25, 0.4);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.28);
   }
 }
 
 @layer utilities {
+  /* Translucent frosted glass surface overlays */
   .bg-glass {
-    background: rgba(11, 19, 41, 0.75);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: rgba(13, 20, 40, 0.50) !important;
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
   }
 
   .border-glow-teal {
-    box-shadow: 0 0 15px -3px rgba(20, 184, 166, 0.25);
+    box-shadow: 0 0 20px -2px rgba(20, 184, 166, 0.35);
+  }
+
+  .border-glow-purple {
+    box-shadow: 0 0 20px -2px rgba(139, 92, 246, 0.4);
+  }
+
+  /* Global glass styling enhancements for dark cards across the application */
+  .bg-navy-950 {
+    background-color: rgba(10, 16, 32, 0.55) !important;
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+  }
+
+  .bg-navy-900 {
+    background-color: rgba(13, 20, 42, 0.50) !important;
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+  }
+
+  .bg-navy-850 {
+    background-color: rgba(18, 28, 56, 0.45) !important;
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+  }
+
+  .border-navy-800 {
+    border-color: rgba(255, 255, 255, 0.12) !important;
+  }
+
+  .border-navy-750 {
+    border-color: rgba(255, 255, 255, 0.15) !important;
+  }
+
+  /* Frosted Glass UI Components */
+  .glass-card {
+    background: rgba(14, 22, 42, 0.50) !important;
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37), inset 0 1px 0 0 rgba(255, 255, 255, 0.10);
+  }
+
+  .glass-card-hover {
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .glass-card-hover:hover {
+    background: rgba(20, 30, 56, 0.65) !important;
+    border-color: rgba(255, 255, 255, 0.20);
+    box-shadow: 0 12px 36px 0 rgba(0, 0, 0, 0.45), inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
+  }
+}
+
+/* Glowing purple-to-blue gradient primary button */
+  .btn-gradient-purple,
+  button.bg-teal-500,
+  a.bg-teal-500 {
+    background: linear-gradient(135deg, #8B5CF6 0%, #6366F1 50%, #3B82F6 100%) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 4px 20px -2px rgba(139, 92, 246, 0.45) !important;
+    transition: all 0.2s ease-in-out !important;
+  }
+  .btn-gradient-purple:hover:not(:disabled),
+  button.bg-teal-500:hover:not(:disabled),
+  a.bg-teal-500:hover {
+    background: linear-gradient(135deg, #9D71F8 0%, #7578F3 50%, #4F93F7 100%) !important;
+    box-shadow: 0 6px 26px 0 rgba(139, 92, 246, 0.6) !important;
+    transform: translateY(-1px) !important;
+  }
+
+  /* Glassmorphic inputs and form controls */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="url"],
+  textarea,
+  select {
+    background-color: rgba(10, 16, 32, 0.65) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #ffffff !important;
+    transition: all 0.2s ease-in-out;
+  }
+  input[type="text"]:focus,
+  input[type="email"]:focus,
+  input[type="password"]:focus,
+  input[type="url"]:focus,
+  textarea:focus,
+  select:focus {
+    border-color: rgba(168, 85, 247, 0.6) !important;
+    box-shadow: 0 0 0 2px rgba(147, 51, 234, 0.25) !important;
+    outline: none !important;
   }
 
   /* Citizen Accessibility Scaling */
@@ -47,13 +169,41 @@
   /* High Contrast Mode for Low-Vision & Senior Citizens */
   .citizen-high-contrast {
     background-color: #000000 !important;
+    background-image: none !important;
     color: #FFFFFF !important;
   }
 
-  .citizen-high-contrast .hc-card {
+  .citizen-high-contrast .hc-card,
+  .citizen-high-contrast .bg-navy-900,
+  .citizen-high-contrast .bg-navy-950,
+  .citizen-high-contrast .bg-navy-850,
+  .citizen-high-contrast .glass-card {
     background-color: #0c0c0c !important;
+    backdrop-filter: none !important;
     border-color: #FACC15 !important;
     color: #FFFFFF !important;
+  }
+
+  .citizen-high-contrast input,
+  .citizen-high-contrast textarea,
+  .citizen-high-contrast select {
+    background-color: #000000 !important;
+    border-color: #FACC15 !important;
+    color: #FFFFFF !important;
+    box-shadow: none !important;
+  }
+
+  .citizen-high-contrast button.bg-teal-500,
+  .citizen-high-contrast a.bg-teal-500,
+  .citizen-high-contrast .btn-gradient-purple,
+  .citizen-high-contrast .hc-btn-primary {
+    background: #FACC15 !important;
+    background-color: #FACC15 !important;
+    color: #000000 !important;
+    border-color: #FACC15 !important;
+    box-shadow: none !important;
+    transform: none !important;
+    font-weight: 800 !important;
   }
 
   .citizen-high-contrast .hc-text-highlight {
@@ -63,11 +213,3 @@
   .citizen-high-contrast .hc-border {
     border-color: #FACC15 !important;
   }
-
-  .citizen-high-contrast .hc-btn-primary {
-    background-color: #FACC15 !important;
-    color: #000000 !important;
-    font-weight: 800 !important;
-  }
-}
-

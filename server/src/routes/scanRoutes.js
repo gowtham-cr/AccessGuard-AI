@@ -2,6 +2,8 @@ import express from 'express';
 import { run, get, all, transaction } from '../db/database.js';
 import { requireAuth } from '../middleware/auth.js';
 import { runAccessibilityScan, AUTOMATED_TESTING_DISCLAIMER } from '../services/scannerService.js';
+import { calculateWcagScore, getGrade } from '../services/wcagScorer.js';
+import { generateSarifReport } from '../services/sarifService.js';
 import { config } from '../config.js';
 
 export const scanRouter = express.Router();
@@ -236,6 +238,8 @@ scanRouter.post('/', requireAuth, async (req, res) => {
              passes_count = ?,
              inapplicable_count = ?,
              incomplete_count = ?,
+             wcag_score = ?,
+             wcag_grade = ?,
              pages_scanned = ?,
              pages_failed = ?,
              completed_at = datetime('now')
@@ -249,18 +253,20 @@ scanRouter.post('/', requireAuth, async (req, res) => {
         scanResult.passesCount,
         scanResult.inapplicableCount,
         scanResult.incompleteCount || 0,
+        scanResult.score ?? null,
+        scanResult.grade ?? null,
         scanResult.pagesScanned || 1,
         scanResult.pagesFailed || 0,
         scanId
       );
 
-      // 6. Persist concrete violations with page_url and deterministic guidance
+      // 6. Persist concrete violations with page_url, wcag_principle, and deterministic guidance
       for (const v of scanResult.violations) {
         run(
           `INSERT INTO scan_violations (
             scan_id, page_url, rule_id, impact, description, help_text, help_url,
-            wcag_tags, selector, html_snippet, failure_summary, deterministic_guidance
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            wcag_tags, wcag_principle, selector, html_snippet, failure_summary, deterministic_guidance
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           scanId,
           v.page_url || scanResult.url,
           v.rule_id,
@@ -269,6 +275,7 @@ scanRouter.post('/', requireAuth, async (req, res) => {
           v.help_text,
           v.help_url,
           v.wcag_tags,
+          v.wcag_principle || null,
           v.selector,
           v.html_snippet,
           v.failure_summary,
@@ -281,8 +288,8 @@ scanRouter.post('/', requireAuth, async (req, res) => {
         run(
           `INSERT INTO scan_manual_checks (
             scan_id, page_url, rule_id, impact, description, help_text, help_url,
-            wcag_tags, selector, html_snippet, failure_summary, review_guidance
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            wcag_tags, wcag_principle, selector, html_snippet, failure_summary, review_guidance
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           scanId,
           m.page_url || scanResult.url,
           m.rule_id,
@@ -291,6 +298,7 @@ scanRouter.post('/', requireAuth, async (req, res) => {
           m.help_text || null,
           m.help_url || null,
           m.wcag_tags || null,
+          m.wcag_principle || null,
           m.selector || '',
           m.html_snippet || '',
           m.failure_summary || null,
@@ -304,12 +312,23 @@ scanRouter.post('/', requireAuth, async (req, res) => {
     const savedViolations = all('SELECT * FROM scan_violations WHERE scan_id = ? ORDER BY id ASC', scanId);
     const savedManualChecks = all('SELECT * FROM scan_manual_checks WHERE scan_id = ? ORDER BY id ASC', scanId);
 
+    const scoring = calculateWcagScore(
+      savedViolations,
+      savedScan.passes_count || 0,
+      savedScan.incomplete_count || savedManualChecks.length || 0
+    );
+
     return res.status(201).json({
       message: 'Accessibility scan completed successfully',
-      scan: savedScan,
+      scan: {
+        ...savedScan,
+        wcag_score: savedScan.wcag_score ?? scoring.overallScore,
+        wcag_grade: scoring.grade,
+      },
       pages: savedPages,
       violations: savedViolations,
       manualChecks: savedManualChecks,
+      scoring,
       automatedTestingDisclaimer: AUTOMATED_TESTING_DISCLAIMER,
     });
   } catch (err) {
@@ -336,7 +355,7 @@ scanRouter.post('/', requireAuth, async (req, res) => {
 
 /**
  * GET /api/scans
- * Returns scan history for the authenticated user.
+ * Returns scan history for the authenticated user with consistent grade gating.
  */
 scanRouter.get('/', requireAuth, (req, res) => {
   const scans = all(
@@ -344,8 +363,15 @@ scanRouter.get('/', requireAuth, (req, res) => {
     req.user.id
   );
 
+  const normalizedScans = scans.map((s) => ({
+    ...s,
+    wcag_grade: s.wcag_score !== null && s.wcag_score !== undefined
+      ? getGrade(s.wcag_score, s.critical_count, s.serious_count)
+      : (s.wcag_grade ?? null),
+  }));
+
   return res.status(200).json({
-    scans,
+    scans: normalizedScans,
     automatedTestingDisclaimer: AUTOMATED_TESTING_DISCLAIMER,
   });
 });
@@ -507,7 +533,7 @@ scanRouter.get('/compare', requireAuth, (req, res) => {
 
 /**
  * GET /api/scans/:id/export
- * Exports complete audit data in JSON or CSV format with strict escaping and honesty disclaimers.
+ * Exports complete audit data in JSON, CSV, or SARIF 2.1.0 format with strict escaping and honesty disclaimers.
  */
 scanRouter.get('/:id/export', requireAuth, (req, res) => {
   const scanId = parseInt(req.params.id, 10);
@@ -525,6 +551,16 @@ scanRouter.get('/:id/export', requireAuth, (req, res) => {
   const manualChecks = all('SELECT * FROM scan_manual_checks WHERE scan_id = ? ORDER BY id ASC', scanId);
 
   const format = (req.query.format || 'json').toLowerCase();
+
+  if (format === 'sarif') {
+    const gatedGrade = scan.wcag_score !== null && scan.wcag_score !== undefined
+      ? getGrade(scan.wcag_score, scan.critical_count, scan.serious_count)
+      : (scan.wcag_grade ?? null);
+    const sarifPayload = generateSarifReport(scan, violations, manualChecks, { gatedGrade });
+    res.setHeader('Content-Type', 'application/sarif+json; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="accessguard-audit-${scan.id}.sarif"`);
+    return res.status(200).send(JSON.stringify(sarifPayload, null, 2));
+  }
 
   if (format === 'csv') {
     const headers = [
@@ -637,6 +673,10 @@ scanRouter.get('/:id/export', requireAuth, (req, res) => {
         manualReviewCount: scan.incomplete_count || manualChecks.length || 0,
         passesCount: scan.passes_count,
         inapplicableCount: scan.inapplicable_count,
+        wcagScore: scan.wcag_score ?? null,
+        wcagGrade: scan.wcag_score !== null && scan.wcag_score !== undefined
+          ? getGrade(scan.wcag_score, scan.critical_count, scan.serious_count)
+          : (scan.wcag_grade ?? null),
       },
       pages: pages.map((p) => ({
         url: p.url,
@@ -656,6 +696,7 @@ scanRouter.get('/:id/export', requireAuth, (req, res) => {
         helpText: v.help_text,
         helpUrl: v.help_url,
         wcagTags: v.wcag_tags,
+        wcagPrinciple: v.wcag_principle || null,
         selector: v.selector,
         htmlSnippet: v.html_snippet,
         failureSummary: v.failure_summary,
@@ -686,6 +727,33 @@ scanRouter.get('/:id/export', requireAuth, (req, res) => {
 });
 
 /**
+ * GET /api/scans/:id/sarif
+ * Dedicated convenience endpoint for SARIF 2.1.0 static analysis export.
+ */
+scanRouter.get('/:id/sarif', requireAuth, (req, res) => {
+  const scanId = parseInt(req.params.id, 10);
+  if (isNaN(scanId)) {
+    return res.status(400).json({ error: 'Invalid scan ID.' });
+  }
+
+  const scan = get('SELECT * FROM scans WHERE id = ?', scanId);
+  if (!scan || scan.user_id !== req.user.id) {
+    return res.status(404).json({ error: 'Scan not found.' });
+  }
+
+  const violations = all('SELECT * FROM scan_violations WHERE scan_id = ? ORDER BY id ASC', scanId);
+  const manualChecks = all('SELECT * FROM scan_manual_checks WHERE scan_id = ? ORDER BY id ASC', scanId);
+
+  const gatedGrade = scan.wcag_score !== null && scan.wcag_score !== undefined
+    ? getGrade(scan.wcag_score, scan.critical_count, scan.serious_count)
+    : (scan.wcag_grade ?? null);
+  const sarifPayload = generateSarifReport(scan, violations, manualChecks, { gatedGrade });
+  res.setHeader('Content-Type', 'application/sarif+json; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="accessguard-audit-${scan.id}.sarif"`);
+  return res.status(200).send(JSON.stringify(sarifPayload, null, 2));
+});
+
+/**
  * GET /api/scans/:id
  * Returns a specific scan along with its scanned pages, concrete violations, and manual-review checks.
  */
@@ -704,11 +772,22 @@ scanRouter.get('/:id', requireAuth, (req, res) => {
   const violations = all('SELECT * FROM scan_violations WHERE scan_id = ? ORDER BY id ASC', scanId);
   const manualChecks = all('SELECT * FROM scan_manual_checks WHERE scan_id = ? ORDER BY id ASC', scanId);
 
+  const scoring = calculateWcagScore(
+    violations,
+    scan.passes_count || 0,
+    scan.incomplete_count || manualChecks.length || 0
+  );
+
   return res.status(200).json({
-    scan,
+    scan: {
+      ...scan,
+      wcag_score: scan.wcag_score ?? scoring.overallScore,
+      wcag_grade: scoring.grade,
+    },
     pages,
     violations,
     manualChecks,
+    scoring,
     automatedTestingDisclaimer: AUTOMATED_TESTING_DISCLAIMER,
   });
 });

@@ -167,6 +167,43 @@ describe('Senior Safety Shield — Frontend & Dashboard Integration', () => {
       expect(screen.getByText(/Network server timeout/i)).toBeInTheDocument();
     });
 
+    it('Check a Message: handles Network error (Failed to fetch) and recovers upon successful retry', async () => {
+      const mockNetworkError = new Error('Network error: Unable to connect to AccessGuard API server (Failed to fetch)');
+      const checkSpy = vi.spyOn(api, 'checkShieldMessage').mockRejectedValueOnce(mockNetworkError);
+
+      render(
+        <CitizenProvider>
+          <MemoryRouter initialEntries={['/safety-shield?tab=message']}>
+            <SafetyShieldPage />
+          </MemoryRouter>
+        </CitizenProvider>
+      );
+
+      const textarea = screen.getByPlaceholderText(/Paste the message here/i);
+      fireEvent.change(textarea, { target: { value: 'Pay electricity bill now' } });
+
+      const analyzeButton = screen.getByRole('button', { name: /Analyze Message/i });
+      fireEvent.click(analyzeButton);
+
+      expect(await screen.findByRole('alert')).toBeInTheDocument();
+      expect(screen.getByText(/Network error: Unable to connect to AccessGuard API server \(Failed to fetch\)/i)).toBeInTheDocument();
+
+      // Retry when network connectivity is restored
+      checkSpy.mockResolvedValueOnce({
+        riskLevel: 'Needs Verification',
+        warningSigns: [],
+        explanation: 'Payment request identified.',
+        safeNextSteps: ['Check official electricity board portal.'],
+      });
+
+      fireEvent.click(analyzeButton);
+
+      await waitFor(() => {
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      });
+      expect(await screen.findByText('Needs Verification')).toBeInTheDocument();
+    });
+
     it('Check a Website: validates empty input', async () => {
       render(
         <CitizenProvider>

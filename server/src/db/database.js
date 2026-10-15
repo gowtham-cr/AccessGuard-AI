@@ -66,6 +66,19 @@ function ensureIncrementalSchema(db) {
     if (!scanCols.includes('incomplete_count')) {
       db.exec('ALTER TABLE scans ADD COLUMN incomplete_count INTEGER NOT NULL DEFAULT 0;');
     }
+    if (!scanCols.includes('wcag_score')) {
+      db.exec('ALTER TABLE scans ADD COLUMN wcag_score INTEGER;');
+    }
+    if (!scanCols.includes('wcag_grade')) {
+      db.exec('ALTER TABLE scans ADD COLUMN wcag_grade TEXT;');
+    }
+
+    // Retroactively ensure historical scans with critical violations do not hold Grade A
+    db.exec(`
+      UPDATE scans
+      SET wcag_grade = 'B'
+      WHERE wcag_grade = 'A' AND critical_count > 0;
+    `);
 
     const pageCols = db.prepare('PRAGMA table_info(scan_pages)').all().map((c) => c.name);
     if (!pageCols.includes('incomplete_count')) {
@@ -75,6 +88,9 @@ function ensureIncrementalSchema(db) {
     const violationCols = db.prepare('PRAGMA table_info(scan_violations)').all().map((c) => c.name);
     if (!violationCols.includes('page_url')) {
       db.exec('ALTER TABLE scan_violations ADD COLUMN page_url TEXT;');
+    }
+    if (!violationCols.includes('wcag_principle')) {
+      db.exec('ALTER TABLE scan_violations ADD COLUMN wcag_principle TEXT;');
     }
 
     db.exec(`
@@ -88,6 +104,7 @@ function ensureIncrementalSchema(db) {
         help_text TEXT,
         help_url TEXT,
         wcag_tags TEXT,
+        wcag_principle TEXT,
         selector TEXT,
         html_snippet TEXT,
         failure_summary TEXT,
@@ -98,6 +115,11 @@ function ensureIncrementalSchema(db) {
       CREATE INDEX IF NOT EXISTS idx_manual_checks_scan_id ON scan_manual_checks(scan_id);
       CREATE INDEX IF NOT EXISTS idx_manual_checks_rule ON scan_manual_checks(rule_id);
     `);
+
+    const manualCols = db.prepare('PRAGMA table_info(scan_manual_checks)').all().map((c) => c.name);
+    if (!manualCols.includes('wcag_principle')) {
+      db.exec('ALTER TABLE scan_manual_checks ADD COLUMN wcag_principle TEXT;');
+    }
   } catch (err) {
     console.error('Incremental schema verification warning:', err.message);
   }

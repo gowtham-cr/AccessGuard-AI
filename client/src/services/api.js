@@ -5,7 +5,12 @@
  * Communicates with the backend without exposing secrets.
  */
 
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+const rawApiUrl = import.meta.env.VITE_API_URL;
+const API_BASE = rawApiUrl
+  ? (rawApiUrl.replace(/\/+$/, '').endsWith('/api')
+      ? rawApiUrl.replace(/\/+$/, '')
+      : `${rawApiUrl.replace(/\/+$/, '')}/api`)
+  : '/api';
 
 class ApiError extends Error {
   constructor(message, status, data) {
@@ -120,6 +125,8 @@ export const api = {
     request(`/scans/compare?baseId=${encodeURIComponent(baseId)}&targetId=${encodeURIComponent(targetId)}`),
 
   exportScanJson: (id) => request(`/scans/${id}/export?format=json`),
+
+  exportScanSarif: (id) => request(`/scans/${id}/export?format=sarif`),
 
   getExportUrl: (id, format = 'json') =>
     `${API_BASE}/scans/${id}/export?format=${format}`,

@@ -54,26 +54,26 @@ export function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-navy-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-transparent flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center px-4">
         <Link 
           to="/"
-          className="inline-flex items-center gap-3 focus-visible:ring-2 focus-visible:ring-teal-400 rounded-xl p-1"
+          className="inline-flex items-center gap-3 focus-visible:ring-2 focus-visible:ring-purple-400 rounded-xl p-1"
         >
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-teal-400 to-teal-700 flex items-center justify-center text-navy-950 shadow-lg border-glow-teal">
-            <ShieldCheck className="w-7 h-7 text-navy-950" aria-hidden="true" />
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 via-indigo-600 to-blue-600 flex items-center justify-center text-white shadow-xl shadow-purple-500/30 border border-white/20">
+            <ShieldCheck className="w-7 h-7 text-white" aria-hidden="true" />
           </div>
         </Link>
         <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-white">
           Create Auditor Account
         </h1>
-        <p className="mt-2 text-sm text-slate-400">
+        <p className="mt-2 text-sm text-slate-300">
           Join AccessGuard AI to audit public digital services
         </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4">
-        <div className="bg-navy-900 border border-navy-800 py-8 px-6 sm:px-10 shadow-2xl rounded-2xl">
+        <div className="bg-slate-950/40 backdrop-blur-2xl border border-white/15 py-8 px-6 sm:px-10 shadow-2xl rounded-3xl">
           {errorMessage && (
             <div 
               role="alert" 
@@ -106,7 +106,7 @@ export function RegisterPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Jane Doe"
-                  className="block w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-navy-950 border border-navy-800 text-white placeholder-slate-500 text-sm focus-visible:ring-2 focus-visible:ring-teal-400"
+                  className="block w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-slate-900/60 border border-white/15 text-white placeholder-slate-400 text-sm focus-visible:ring-2 focus-visible:ring-purple-400"
                 />
               </div>
             </div>
@@ -132,7 +132,7 @@ export function RegisterPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="jane.doe@agency.gov"
-                  className="block w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-navy-950 border border-navy-800 text-white placeholder-slate-500 text-sm focus-visible:ring-2 focus-visible:ring-teal-400"
+                  className="block w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-slate-900/60 border border-white/15 text-white placeholder-slate-400 text-sm focus-visible:ring-2 focus-visible:ring-purple-400"
                 />
               </div>
             </div>
@@ -158,7 +158,7 @@ export function RegisterPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="At least 8 characters"
-                  className="block w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-navy-950 border border-navy-800 text-white placeholder-slate-500 text-sm focus-visible:ring-2 focus-visible:ring-teal-400"
+                  className="block w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-slate-900/60 border border-white/15 text-white placeholder-slate-400 text-sm focus-visible:ring-2 focus-visible:ring-purple-400"
                 />
               </div>
             </div>
@@ -184,13 +184,13 @@ export function RegisterPage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Re-enter password"
-                  className="block w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-navy-950 border border-navy-800 text-white placeholder-slate-500 text-sm focus-visible:ring-2 focus-visible:ring-teal-400"
+                  className="block w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-slate-900/60 border border-white/15 text-white placeholder-slate-400 text-sm focus-visible:ring-2 focus-visible:ring-purple-400"
                 />
               </div>
             </div>
 
             {/* Password Criteria Checklist */}
-            <div className="p-3 rounded-xl bg-navy-950 border border-navy-800/80 space-y-1.5 text-[11px]">
+            <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1.5 text-[11px]">
               <span className="font-semibold text-slate-400 uppercase tracking-wider block mb-1">
                 Security Checklist
               </span>
@@ -218,7 +218,7 @@ export function RegisterPage() {
             <button
               type="submit"
               disabled={loading || !isFormValid}
-              className="w-full mt-2 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-bold bg-teal-500 hover:bg-teal-400 text-navy-950 shadow-lg shadow-teal-500/20 transition-all focus-visible:ring-2 focus-visible:ring-teal-400 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full mt-2 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-bold bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white shadow-lg shadow-purple-500/30 border border-white/20 transition-all focus-visible:ring-2 focus-visible:ring-purple-400 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>
@@ -235,12 +235,12 @@ export function RegisterPage() {
           </form>
 
           {/* Login Link */}
-          <div className="mt-6 pt-6 border-t border-navy-800/80 text-center">
-            <p className="text-xs text-slate-400">
+          <div className="mt-6 pt-6 border-t border-white/10 text-center">
+            <p className="text-xs text-slate-300">
               Already have an auditor account?{' '}
               <Link 
                 to="/login" 
-                className="font-semibold text-teal-300 hover:text-teal-200 underline focus-visible:ring-2 focus-visible:ring-teal-400 rounded"
+                className="font-semibold text-purple-300 hover:text-purple-200 underline focus-visible:ring-2 focus-visible:ring-purple-400 rounded"
               >
                 Sign in here
               </Link>
